@@ -2,6 +2,67 @@
 
 #include "semiLag.hpp"
 
+static double p[GRID_SIZE][GRID_SIZE][GRID_SIZE];
+
+void poissonSolver(Grid &g) {
+	/* User of this function should provide in g 
+	 * the heuristic guessing of the p value
+	 * and should guarantee that v equals to u*
+	 * before calculation
+	 */
+	const double STEP = 2.0 / GRID_SIZE;
+	const double d = STEP * STEP;
+	const double a = d / 6.0;
+	const double af = d * d / 6.0;
+	int iter = 0;
+	double maxDIFF = 0;
+	do{
+		/* Iterate time can be controlled for better performance */
+		for(int i = 0; i != GRID_SIZE; ++i) {
+			int iMinus = i - 1 < 0 ? 0 : i - 1;
+			int iPlus = i + 1 >= GRID_SIZE ? i : i + 1;
+			for(int j = 0; j != GRID_SIZE; ++j) {
+				int jMinus = j - 1 < 0 ? 0 : j - 1;
+				int jPlus = j + 1 >= GRID_SIZE ? j : j + 1;
+				for(int k = 0; k != GRID_SIZE; ++k) {
+					int kMinus = k - 1 < 0 ? 0 : k - 1;
+					int kPlus = k + 1 >= GRID_SIZE ? k : k + 1;
+
+					/* Here we calculate divUStar */
+					double divUStar = g.particle[i][j][k].vx + 
+						g.particle[i][j][k].vy + 
+						g.particle[i][j][k].vz;
+
+					/* This might be put outside the function to 
+					 * care for vicinity */
+					if(i - 1 >= 0)
+						divUStar -= g.particle[i - 1][j][k].vx;
+					if(j - 1 >= 0)
+						divUStar -= g.particle[i][j - 1][k].vy;
+					if(k - 1 >= 0)
+						divUStar -= g.particle[i][j][k - 1].vz;
+
+					p[i][j][k] = a * (
+							g.particle[iMinus][j][k].p + g.particle[iPlus][j][k].p +
+							g.particle[i][jMinus][k].p + g.particle[i][jPlus][k].p +
+							g.particle[i][j][kMinus].p + g.particle[i][j][kPlus].p
+							) - af * divUStar / TIME_STEP;
+					if(p[i][j][k] - g.particle[i][j][k].p > maxDIFF)
+						maxDIFF = p[i][j][k] - g.particle[i][j][k].p;
+				}
+			}
+		}
+		for(int i = 0; i != GRID_SIZE; ++i) {
+			for(int j = 0; j != GRID_SIZE; ++j) {
+				for(int k = 0; k != GRID_SIZE; ++k) {
+					g.particle[i][j][k].p = p[i][j][k];
+				}
+			}
+		}
+		++iter;
+	}while(iter < POISSON_ITER && maxDIFF > 0.05);
+}
+
 
 /* Hermite Interpolation */
 /* This instanciation is only used for non-velocity interpolation */
@@ -210,20 +271,6 @@ static Vec2 tempXdensYInterpolationWrapper(const Vec3&loc, const Grid &g) {
 	/*
 	 *std::cout << v.dx << ' ' << v.dy << std::endl;
 	 */
-	/*
-	 *if(v.dy < 0) {
-	 *    std::cout << v.dy << std::endl;
-	 *    for(int i = 0; i != 4; ++i) {
-	 *        for(int j = 0; j != 4; ++j) {
-	 *            for(int k = 0; k != 4; ++k) {
-	 *                std::cout << dataDens[i][j][k] << ' ';
-	 *            }
-	 *            std::cout << std::endl;
-	 *        }
-	 *        std::cout << std::endl << std::endl;
-	 *    }
-	 *}
-	 */
 
 	return v;
 }
@@ -425,7 +472,7 @@ void semiLagrangeCalc(const Grid &old, Grid &gen) {
 				Vec3 newAlpha = velocityInterpolationWrapper(curr - alpha * 0.5, old)
 					* TIME_STEP;
 				int iter = 1;
-				while(dist(alpha, newAlpha) < 0.10 && iter < ITER_TIMES) {
+				while(dist(alpha, newAlpha) < 0.05 && iter < ITER_TIMES) {
 					alpha = newAlpha;
 					/* use vStar to interpolate */
 					newAlpha = velocityInterpolationWrapper(curr - alpha * 0.5, old)
@@ -485,7 +532,34 @@ void semiLagrangeCalc(const Grid &old, Grid &gen) {
 				gen.particle[i][j][k].vy = vYInterpolateWrapper(locY - vYAlpha, old);
 				gen.particle[i][j][k].vz = vZInterpolateWrapper(locZ - vZAlpha, old);
 
-				/* Then we will update V* */
+			}
+		}
+	}
+	for(int i = 0; i != GRID_SIZE; ++i)
+		for(int j = 0; j != GRID_SIZE; ++j)
+			for(int k = 0; k != GRID_SIZE; ++k)
+				gen.particle[i][j][k].p = old.particle[i][j][k].p;
+	poissonSolver(gen);
+	for(int i = 0; i != GRID_SIZE; ++i) {
+		int iPlus = i + 1 >= GRID_SIZE ? i : i + 1;
+		for(int j = 0; j != GRID_SIZE; ++j) {
+			int jPlus = j + 1 >= GRID_SIZE ? j : j + 1;
+			for(int k = 0; k != GRID_SIZE; ++k) {
+				int kPlus = k + 1 >= GRID_SIZE ? k : k + 1;
+				/* First subtract influence of p to 
+				 * make the fluid incompressible
+				 */
+				double dpX = 
+					(gen.particle[iPlus][j][k].p - gen.particle[i][j][k].p) / STEP;
+				double dpY =
+					(gen.particle[i][jPlus][k].p - gen.particle[i][j][k].p) / STEP;
+				double dpZ =
+					(gen.particle[i][j][kPlus].p - gen.particle[i][j][k].p) / STEP;
+				gen.particle[i][j][k].vx -= dpX * TIME_STEP;
+				gen.particle[i][j][k].vy -= dpY * TIME_STEP;
+				gen.particle[i][j][k].vz -= dpZ * TIME_STEP;
+
+				/* We'll calculate vStar next */
 				gen.particle[i][j][k].vStarX = 1.5 * gen.particle[i][j][k].vx
 					- 0.5 * old.particle[i][j][k].vx;
 				gen.particle[i][j][k].vStarY = 1.5 * gen.particle[i][j][k].vy

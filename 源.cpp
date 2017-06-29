@@ -6,38 +6,40 @@
 
 #include "semiLag.hpp"
 #include "semiLag.cpp"
+#include "vector.hpp"
+#include "vector.cpp"
 //#define particle_Grid_Len 10
 //
 //const double h = 1.0 / particle_Grid_Len;
 //
-///* Á£×Ó½á¹¹ */
+///* ç²’å­ç»“æ„ */
 //
 //struct Particle
 //{
-//	unsigned int  r, g, b;      /* Á£×ÓµÄÑÕÉ« */
-//	double vx, vy, vz;          /* Á£×ÓµÄµ±Ç°ËÙ¶È */
-//	double duration;			/* Á£×Ó³ÖĞøÊ±¼ä */
-//	double size;                /* Á£×Ó³ß´ç */
-//	double temperature;         /* Á£×ÓÎÂ¶È */
-//	double density;             /* Á£×ÓÃÜ¶È */
+//	unsigned int  r, g, b;      /* ç²’å­çš„é¢œè‰² */
+//	double vx, vy, vz;          /* ç²’å­çš„å½“å‰é€Ÿåº¦ */
+//	double duration;			/* ç²’å­æŒç»­æ—¶é—´ */
+//	double size;                /* ç²’å­å°ºå¯¸ */
+//	double temperature;         /* ç²’å­æ¸©åº¦ */
+//	double density;             /* ç²’å­å¯†åº¦ */
 //	double force[3];
 //};
 //
-///* Á£×ÓÍø¸ñÀà */
+///* ç²’å­ç½‘æ ¼ç±» */
 //class Grid
 //{
 //public:
-//	Particle***   particle;               /* Á£×ÓÖ¸Õë */
-//	//int         particle_Cnt;         /* Á£×ÓÊıÄ¿ */
-//	double      temp_avg;            /* ÎÂ¶ÈÌõ¼ş */
+//	Particle***   particle;               /* ç²’å­æŒ‡é’ˆ */
+//	//int         particle_Cnt;         /* ç²’å­æ•°ç›® */
+//	double      temp_avg;            /* æ¸©åº¦æ¡ä»¶ */
 //
-//	/* ¹¹Ôìº¯Êı */
+//	/* æ„é€ å‡½æ•° */
 //	Grid() {
 //		particle = NULL;
 //		//particle_Cnt = 0;
 //		temp_avg = 0;
 //	}
-//	/* Îö¹¹º¯Êı */
+//	/* ææ„å‡½æ•° */
 //	~Grid() {
 //		for (int i = 0; i < particle_Grid_Len; i++)
 //			for (int j = 0; j < particle_Grid_Len; j++) {
@@ -53,7 +55,7 @@
 //		particle = NULL;
 //	}
 //
-//	/* ´´½¨Á£×ÓÊı×é */
+//	/* åˆ›å»ºç²’å­æ•°ç»„ */
 //	void CreateGrid(long num) {
 //		if (particle)
 //			delete[] particle;
@@ -72,7 +74,7 @@
 //
 //	}
 //
-//	/* ÉèÖÃºÍ»ñÈ¡ÑÕÉ«ÊôĞÔ */
+//	/* è®¾ç½®å’Œè·å–é¢œè‰²å±æ€§ */
 //	void SetAllColor(GLint r, GLint g, GLint b) {
 //		for (int i = 0; i < particle_Grid_Len; i++)
 //			for (int j = 0; j < particle_Grid_Len; j++)
@@ -107,7 +109,7 @@
 //		return false;
 //	}
 //
-//	/* ÉèÖÃºÍ»ñÈ¡ËÙ¶ÈÊôĞÔ */
+//	/* è®¾ç½®å’Œè·å–é€Ÿåº¦å±æ€§ */
 //	void SetAllVelocity(GLdouble vx, GLdouble vy, GLdouble vz) {
 //		for (int i = 0; i < particle_Grid_Len; i++)
 //			for (int j = 0; j < particle_Grid_Len; j++)
@@ -142,7 +144,7 @@
 //		return false;
 //	}
 //
-//	/* ÉèÖÃºÍ»ñÈ¡³ÖĞøÊ±¼ä */
+//	/* è®¾ç½®å’Œè·å–æŒç»­æ—¶é—´ */
 //	void SetAllDuration(GLdouble duration) {
 //		for (int i = 0; i < particle_Grid_Len; i++)
 //			for (int j = 0; j < particle_Grid_Len; j++)
@@ -171,7 +173,7 @@
 //		return false;
 //	}
 //
-//	/* ÉèÖÃºÍ»ñÈ¡³ß´çÊôĞÔ */
+//	/* è®¾ç½®å’Œè·å–å°ºå¯¸å±æ€§ */
 //	void SetAllSize(GLdouble size) {
 //		for (int i = 0; i < particle_Grid_Len; i++)
 //			for (int j = 0; j < particle_Grid_Len; j++)
@@ -200,7 +202,7 @@
 //		return false;
 //	}
 //
-//	/* ÉèÖÃºÍ»ñÈ¡ÎÂ¶ÈĞÅÏ¢ */
+//	/* è®¾ç½®å’Œè·å–æ¸©åº¦ä¿¡æ¯ */
 //	void SetAllTemperature(GLdouble temp) {
 //		for (int i = 0; i < particle_Grid_Len; i++)
 //			for (int j = 0; j < particle_Grid_Len; j++)
@@ -238,7 +240,7 @@
 //		temp_avg /= (particle_Grid_Len - 2)* (particle_Grid_Len - 2)* (particle_Grid_Len - 2);
 //	}
 //
-//	/* ÉèÖÃºÍ»ñÈ¡ÃÜ¶ÈĞÅÏ¢ */
+//	/* è®¾ç½®å’Œè·å–å¯†åº¦ä¿¡æ¯ */
 //	void SetAllDensity(GLdouble density) {
 //		for (int i = 0; i < particle_Grid_Len; i++)
 //			for (int j = 0; j < particle_Grid_Len; j++)
@@ -267,22 +269,22 @@
 //		return false;
 //	}
 //
-//	/* »ñÈ¡Á£×ÓÊı×éµØÖ· */
+//	/* è·å–ç²’å­æ•°ç»„åœ°å€ */
 //	//Particle *GetParticle() { 
 //	//	return particle; 
 //	//}
 //
-//	/* »ñµÃÁ£×ÓµÄÊıÄ¿ */
+//	/* è·å¾—ç²’å­çš„æ•°ç›® */
 //	//int GetParticleCnt() { return particle_Cnt; }
 //
-//	/* ÉèÖÃÁ£×ÓµÄËùÓĞÊôĞÔ */
-//	int SetAllData(int i, int j, int k,                /* ÏÂ±ê */
-//		GLint r, GLint g, GLint b,                /* ÑÕÉ« */
-//		GLdouble vx, GLdouble vy, GLdouble vz,    /* ËÙ¶È */
-//		GLdouble size,                              /* ´óĞ¡ */
-//		GLdouble duration,                          /* ³ÖĞøÊ±¼ä */
-//		GLdouble temperature,                       /* ÎÂ¶È */
-//		GLdouble density                            /* ÃÜ¶È */
+//	/* è®¾ç½®ç²’å­çš„æ‰€æœ‰å±æ€§ */
+//	int SetAllData(int i, int j, int k,                /* ä¸‹æ ‡ */
+//		GLint r, GLint g, GLint b,                /* é¢œè‰² */
+//		GLdouble vx, GLdouble vy, GLdouble vz,    /* é€Ÿåº¦ */
+//		GLdouble size,                              /* å¤§å° */
+//		GLdouble duration,                          /* æŒç»­æ—¶é—´ */
+//		GLdouble temperature,                       /* æ¸©åº¦ */
+//		GLdouble density                            /* å¯†åº¦ */
 //		) {
 //		if (i >= 0 && i < particle_Grid_Len
 //			&& j >= 0 && j < particle_Grid_Len
@@ -302,14 +304,14 @@
 //		return false;
 //	}
 //
-//	/* »ñµÃÁ£×ÓËùÓĞµÄÊôĞÔ */
-//	int GetAllData(int i, int j, int k,              /* ÏÂ±ê */
-//		GLint &r, GLint &g, GLint &b,                /* ÑÕÉ« */
-//		GLdouble &vx, GLdouble &vy, GLdouble &vz,    /* ËÙ¶È */
-//		GLdouble &size,                              /* ´óĞ¡ */
-//		GLdouble &duration,                          /* ³ÖĞøÊ±¼ä */
-//		GLdouble &temperature,                       /* ÎÂ¶È */
-//		GLdouble &density                            /* ÃÜ¶È */
+//	/* è·å¾—ç²’å­æ‰€æœ‰çš„å±æ€§ */
+//	int GetAllData(int i, int j, int k,              /* ä¸‹æ ‡ */
+//		GLint &r, GLint &g, GLint &b,                /* é¢œè‰² */
+//		GLdouble &vx, GLdouble &vy, GLdouble &vz,    /* é€Ÿåº¦ */
+//		GLdouble &size,                              /* å¤§å° */
+//		GLdouble &duration,                          /* æŒç»­æ—¶é—´ */
+//		GLdouble &temperature,                       /* æ¸©åº¦ */
+//		GLdouble &density                            /* å¯†åº¦ */
 //		) {
 //
 //		if (i >= 0 && i < particle_Grid_Len
@@ -421,25 +423,26 @@
 //}minus_smoke,zero_smoke,plus_smoke;
 
 
-double vx, vy, vz, size, duration, temperature, density;
+double vx, vy, vz, vStarX,vStarY,vStarZ,size, duration, temperature, density;
 int r, g, b;
 double deltaTime = 0.01;
+Vec3 advectionTerm;
 
 void InitSmoke() {
 
-	/* ³õÊ¼»¯ÑÕÉ« */
+	/* åˆå§‹åŒ–é¢œè‰² */
 	r = 192;
 	g = 192;
 	b = 192;
-	minus_smoke.SetAllColor(r, g, b);
+	old_smoke.SetAllColor(r, g, b);
 
-	minus_smoke.SetAllVelocity(0, 0, 0);
-	minus_smoke.SetAllDuration(100);
-	minus_smoke.SetAllSize(0.008f);
-	minus_smoke.SetAllTemperature(30);
-	minus_smoke.CalAvgTemperature();
+	old_smoke.SetAllVelocity(0,0,0);
+	old_smoke.SetAllDuration(100);
+	old_smoke.SetAllSize(0.08f);
+	old_smoke.SetAllTemperature(0);
+	old_smoke.CalAvgTemperature();
 
-	/* ³õÊ¼»¯ÃÜ¶È */
+	/* åˆå§‹åŒ–å¯†åº¦ */
 	for (int i = 0; i < particle_Grid_Len; i++)
 		for (int j = 0; j < particle_Grid_Len; j++)
 			for (int k = 0; k < particle_Grid_Len; k++) {
@@ -447,60 +450,9 @@ void InitSmoke() {
 				double y = 4 * ((double)j / particle_Grid_Len) - 2;
 				double z = 4 * ((double)k / particle_Grid_Len) - 2;
 				if (x * x + y * y + z * z < 1)
-					minus_smoke.SetDensity(i, j, k, 1 - x*x - y*y - z*z);
+					old_smoke.SetDensity(i, j, k, 1 - x*x - y*y - z*z);
 				else 
-					minus_smoke.SetDensity(i, j, k, 0);
-			}
-
-	for (int i = 1; i < particle_Grid_Len - 1; i++)
-		for (int j = 1; j < particle_Grid_Len - 1; j++)
-			for (int k = 1; k < particle_Grid_Len - 1; k++) {
-				minus_smoke.GetAllData(i, j, k, r, g, b,
-					vx, vy, vz, size, duration, temperature, density);
-
-				glColor4ub(r, g, b, 255);
-				//glNormal3f(0.0f, 0.0f, 1.0f);
-
-				//double x_location = 2 * ((double)i / particle_Grid_Len) - 1;
-				//double y_location = 2 * ((double)j / particle_Grid_Len) - 1;
-				//double z_location = 2 * ((double)k / particle_Grid_Len) - 1;
-
-				double x_location = ((double)i / particle_Grid_Len) - 0.5;
-				double y_location = ((double)j / particle_Grid_Len) - 0.5;
-				double z_location = ((double)k / particle_Grid_Len) - 0.5;
-
-				//double x_location = ((double)i / particle_Grid_Len);
-				//double y_location = ((double)j / particle_Grid_Len);
-				//double z_location = ((double)k / particle_Grid_Len);
-
-				//glTranslated(x_location, y_location, z_location);
-				//GLUquadricObj* mySphere = gluNewQuadric();
-				//gluSphere(mySphere, size, 32, 16);
-				if (density > 0) {
-					glBegin(GL_QUADS);
-					glVertex3d(x_location - density * size, y_location - density * size, z_location);
-					glVertex3d(x_location - density * size, y_location + density * size, z_location);
-					glVertex3d(x_location + density * size, y_location + density * size, z_location);
-					glVertex3d(x_location + density * size, y_location - density * size, z_location);
-					glEnd();		
-				}
-				
-				minus_smoke.calculateForce(i, j, k);
-			}
-
-	for (int i = 1; i < particle_Grid_Len - 1; i++)
-		for (int j = 1; j < particle_Grid_Len - 1; j++)
-			for (int k = 1; k < particle_Grid_Len - 1; k++) {
-				minus_smoke.GetAllData(i, j, k, r, g, b,
-					vx, vy, vz, size, duration, temperature, density);
-				vx += deltaTime * (minus_smoke.particle[i][j][k].force[0]
-					+ minus_smoke.particle[i + 1][j][k].force[0]) / 2;
-				vy += deltaTime * (minus_smoke.particle[i][j][k].force[1]
-					+ minus_smoke.particle[i][j + 1][k].force[1]) / 2;
-				vz += deltaTime * (minus_smoke.particle[i][j][k].force[2]
-					+ minus_smoke.particle[i][j][k + 1].force[2]) / 2;
-				zero_smoke.SetAllData(i, j, k, r, g, b,
-					vx, vy, vz, size, duration, temperature, density);
+					old_smoke.SetDensity(i, j, k, 0);
 			}
 }
 
@@ -516,7 +468,7 @@ static const float vertex_list[][3] =
 	0.5f, 0.5f, 0.5f,
 };
 
-// ½«ÒªÊ¹ÓÃµÄ¶¥µãµÄĞòºÅ±£´æµ½Ò»¸öÊı×éÀïÃæ   
+// å°†è¦ä½¿ç”¨çš„é¡¶ç‚¹çš„åºå·ä¿å­˜åˆ°ä¸€ä¸ªæ•°ç»„é‡Œé¢   
 
 static const GLint index_list[][2] =
 {
@@ -534,17 +486,17 @@ static const GLint index_list[][2] =
 	{ 2, 6 }
 };
 
-// »æÖÆÁ¢·½Ìå  
+// ç»˜åˆ¶ç«‹æ–¹ä½“  
 
 void DrawEdge(void)
 {
 	int i, j;
 	glColor3b(0, 0, 0);
 	glBegin(GL_LINES);
-	for (i = 0; i<12; ++i) // 12 ÌõÏß¶Î  
+	for (i = 0; i<12; ++i) // 12 æ¡çº¿æ®µ  
 
 	{
-		for (j = 0; j<2; ++j) // Ã¿ÌõÏß¶Î 2¸ö¶¥µã  
+		for (j = 0; j<2; ++j) // æ¯æ¡çº¿æ®µ 2ä¸ªé¡¶ç‚¹  
 
 		{
 			glVertex3fv(vertex_list[index_list[i][j]]);
@@ -553,19 +505,19 @@ void DrawEdge(void)
 	glEnd();
 }
 
-static int count = 0;
+//static int count = 0;
 
 void DrawSmoke() {
 
-		count++;
-		zero_smoke.CalAvgTemperature();
+		//count++;
+		old_smoke.CalAvgTemperature();
 
 		for (int i = 1; i < particle_Grid_Len - 1; i++)
 			for (int j = 1; j < particle_Grid_Len - 1; j++)
 				for (int k = 1; k < particle_Grid_Len - 1; k++) {
 
-					zero_smoke.GetAllData(i, j, k, r, g, b,
-						vx, vy, vz, size, duration, temperature, density);
+					old_smoke.GetAllData(i, j, k, r, g, b,
+						vx, vy, vz, vStarX,vStarY,vStarZ,size, duration, temperature, density,advectionTerm);
 
 					glColor4ub(r, g, b, 255);
 					//glNormal3f(0.0f, 0.0f, 1.0f);
@@ -578,9 +530,9 @@ void DrawSmoke() {
 					double y_location = ((double)j / particle_Grid_Len) - 0.5;
 					double z_location = ((double)k / particle_Grid_Len) - 0.5;
 
-					x_location = x_location/count;
-					y_location = y_location/count;
-					z_location = z_location/count;
+					//x_location = x_location/count;
+					//y_location = y_location/count;
+					//z_location = z_location/count;
 
 					//double x_location = ((double)i / particle_Grid_Len);
 					//double y_location = ((double)j / particle_Grid_Len);
@@ -589,60 +541,54 @@ void DrawSmoke() {
 					//glTranslated(x_location, y_location, z_location);
 					//GLUquadricObj* mySphere = gluNewQuadric();
 					//gluSphere(mySphere, size, 32, 16);
-					//if (density > 0) {
-						//glBegin(GL_QUADS);
-						//glVertex3d(x_location - density * size, y_location - density * size, z_location);
-						//glVertex3d(x_location - density * size, y_location + density * size, z_location);
-						//glVertex3d(x_location + density * size, y_location + density * size, z_location);
-						//glVertex3d(x_location + density * size, y_location - density * size, z_location);
-						//glEnd();
+
+					if (density > 0) {
 						glBegin(GL_QUADS);
-						glVertex3d(x_location - size, y_location - size, z_location);
-						glVertex3d(x_location - size, y_location + size, z_location);
-						glVertex3d(x_location + size, y_location + size, z_location);
-						glVertex3d(x_location + size, y_location - size, z_location);
+						glVertex3d(x_location - density * size, y_location - density * size, z_location);
+						glVertex3d(x_location - density * size, y_location + density * size, z_location);
+						glVertex3d(x_location + density * size, y_location + density * size, z_location);
+						glVertex3d(x_location + density * size, y_location - density * size, z_location);
 						glEnd();
-						
-					//}
+						//glBegin(GL_QUADS);
+						//glVertex3d(x_location - size, y_location - size, z_location);
+						//glVertex3d(x_location - size, y_location + size, z_location);
+						//glVertex3d(x_location + size, y_location + size, z_location);
+						//glVertex3d(x_location + size, y_location - size, z_location);
+						//glEnd();
+						//glFlush();
+					}
 
-					zero_smoke.calculateForce(i, j, k);
+					old_smoke.calculateForce(i, j, k);
 				}
-				glFlush();
+				
+		
+		glFlush();
 		for (int i = 1; i < particle_Grid_Len - 1; i++)
 			for (int j = 1; j < particle_Grid_Len - 1; j++)
 				for (int k = 1; k < particle_Grid_Len - 1; k++) {
-					zero_smoke.GetAllData(i, j, k, r, g, b,
-						vx, vy, vz, size, duration, temperature, density);
-					vx += deltaTime * (zero_smoke.particle[i][j][k].force[0]
-						+ minus_smoke.particle[i + 1][j][k].force[0]) / 2;
-					vy += deltaTime * (zero_smoke.particle[i][j][k].force[1]
-						+ minus_smoke.particle[i][j + 1][k].force[1]) / 2;
-					vz += deltaTime * (zero_smoke.particle[i][j][k].force[2]
-						+ minus_smoke.particle[i][j][k + 1].force[2]) / 2;
-					plus_smoke.SetAllData(i, j, k, r, g, b,
-						vx, vy, vz, size, duration, temperature, density);
+					old_smoke.GetAllData(i, j, k, r, g, b,
+						vx, vy, vz, vStarX,vStarY,vStarZ,size, duration, temperature, density, advectionTerm);
+					vx += deltaTime * (old_smoke.particle[i][j][k].force[0]
+						+ old_smoke.particle[i + 1][j][k].force[0]) / 2.0;
+					vy += deltaTime * (old_smoke.particle[i][j][k].force[1]
+						+ old_smoke.particle[i][j + 1][k].force[1]) / 2.0;
+					vz += deltaTime * (old_smoke.particle[i][j][k].force[2]
+						+ old_smoke.particle[i][j][k + 1].force[2]) / 2.0;
+					old_smoke.SetAllData(i, j, k, r, g, b,
+						vx, vy, vz, vStarX, vStarY, vStarZ, size, duration, temperature, density,advectionTerm);
 				}
 
-		semiCalcTempDens(minus_smoke, zero_smoke, plus_smoke);
+		semiLagrangeCalc(old_smoke, gen_smoke);
 
 		for (int i = 1; i < particle_Grid_Len - 1; i++)
 			for (int j = 1; j < particle_Grid_Len - 1; j++)
 				for (int k = 1; k < particle_Grid_Len - 1; k++) {
-					zero_smoke.GetAllData(i, j, k, r, g, b,
-						vx, vy, vz, size, duration, temperature, density);
-					if (density) {
-						double  n = 0;
-					}
-					minus_smoke.SetAllData(i, j, k, r, g, b,
-						vx, vy, vz, size, duration, temperature, density);
-					plus_smoke.GetAllData(i, j, k, r, g, b,
-						vx, vy, vz, size, duration, temperature, density);
-					if (density) {
-						double m = 0;
-					}
-					zero_smoke.SetAllData(i, j, k, r, g, b,
-						vx, vy, vz, size, duration, temperature, density);
+					gen_smoke.GetAllData(i, j, k, r, g, b,
+						vx, vy, vz, vStarX, vStarY, vStarZ, size, duration, temperature, density,advectionTerm);
+					old_smoke.SetAllData(i, j, k, r, g, b,
+						vx, vy, vz, vStarX, vStarY, vStarZ, size, duration, temperature, density,advectionTerm);
 				}
+		gen_smoke.initAllData();
 		glutPostRedisplay();
 }
 
@@ -651,18 +597,18 @@ void myInit() {
 	//glMatrixMode(GL_PROJECTION);
 	//glLoadIdentity();
 	glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
-	glClearDepth(1.0f);                   //Ö¸¶¨Éî¶È»º³åÇøµÄÇå³ıÖµ(¼´½«Éî¶È»º³åÇøÀïµÄÖµÉèÖÃÎª1)
-	glDepthFunc(GL_LEQUAL);               //Ö¸¶¨ÓÃÓÚÉî¶È»º³å±È½ÏÖµ(¼´ĞÂ½øÏñËØÉî¶ÈÖµÓëÔ­À´µÄ1±È½Ï£¬<=ÔòÍ¨¹ı£¬·ñÔò¶ªÆú)
-	//glEnable(GL_DEPTH_TEST);
+	glClearDepth(1.0f);                   //æŒ‡å®šæ·±åº¦ç¼“å†²åŒºçš„æ¸…é™¤å€¼(å³å°†æ·±åº¦ç¼“å†²åŒºé‡Œçš„å€¼è®¾ç½®ä¸º1)
+	//glDepthFunc(GL_LEQUAL);               //æŒ‡å®šç”¨äºæ·±åº¦ç¼“å†²æ¯”è¾ƒå€¼(å³æ–°è¿›åƒç´ æ·±åº¦å€¼ä¸åŸæ¥çš„1æ¯”è¾ƒï¼Œ<=åˆ™é€šè¿‡ï¼Œå¦åˆ™ä¸¢å¼ƒ)
+	glEnable(GL_DEPTH_TEST);	
+	glDepthFunc(GL_ALWAYS);
 	glShadeModel(GL_SMOOTH);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
-	minus_smoke.CreateGrid(particle_Grid_Len);
-	zero_smoke.CreateGrid(particle_Grid_Len);
-	zero_smoke.initAllData();
-	plus_smoke.CreateGrid(particle_Grid_Len);
-	plus_smoke.initAllData();
-
+	old_smoke.CreateGrid(particle_Grid_Len);
+	old_smoke.initAllData();
+	gen_smoke.CreateGrid(particle_Grid_Len);
+	gen_smoke.initAllData();
+	
 	InitSmoke();
 	//glFlush();
 
@@ -684,15 +630,15 @@ void ChangeSize(int width, int height)
 {
 	GLfloat aspect = (GLfloat)width / (GLfloat)height;
 	GLfloat nRange = 100.0f;
-	/* ÉèÖÃÊÓ¿Ú´óĞ¡ÎªÕû¸ö´°¿Ú´óĞ¡ */
+	/* è®¾ç½®è§†å£å¤§å°ä¸ºæ•´ä¸ªçª—å£å¤§å° */
 	glViewport(0, 0, width, height);
-	/* µ¥Î»»¯Í¶Ó°¾ØÕó */
+	/* å•ä½åŒ–æŠ•å½±çŸ©é˜µ */
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	//glFrustum(-0.5F, 0.5F, -0.5F, 0.5F, 1.0F, 3.0F);
-	/* ÉèÖÃÕıÈ·µÄÍ¶Ó°¾ØÕó */
+	/* è®¾ç½®æ­£ç¡®çš„æŠ•å½±çŸ©é˜µ */
 	//gluPerspective(45.0f, (GLfloat)width / (GLfloat)height, 0.1f, 1000.0f);
-	//ÉèÖÃÈıÎ¬Í¶Ó°Çø  
+	//è®¾ç½®ä¸‰ç»´æŠ•å½±åŒº  
 	//if (width <= height)
 	//{
 	//	glOrtho(-nRange, nRange, -nRange * aspect, nRange * aspect, -nRange, nRange);
@@ -701,11 +647,11 @@ void ChangeSize(int width, int height)
 	//{
 	//	glOrtho(-nRange, nRange, -nRange / aspect, nRange / aspect, -nRange, nRange);
 	//}
-	/* ÉèÖÃÄ£ĞÍÊÓÍ¼¾ØÕó */
+	/* è®¾ç½®æ¨¡å‹è§†å›¾çŸ©é˜µ */
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glRotatef(20.0F, 1.0F, 0.0F, 0.0F);
-	glRotatef(30.0F, 0.0F, 1.0F, 0.0F);
+	glRotatef(-30.0F, 0.0F, 1.0F, 0.0F);
 	//gluLookAt(0.0f, 0.0f, 10.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
 }
 

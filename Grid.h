@@ -4,38 +4,41 @@
 #include <gl\glut.h>
 #include <iostream>
 
-#define particle_Grid_Len 50
+#include "vector.hpp"
+#define particle_Grid_Len 10
 
 const double h = 1.0 / particle_Grid_Len;
 
-/* Á£×Ó½á¹¹ */
+/* ç²’å­ç»“æ„ */
 
 struct Particle
 {
-	unsigned int  r, g, b;      /* Á£×ÓµÄÑÕÉ« */
-	double vx, vy, vz;          /* Á£×ÓµÄµ±Ç°ËÙ¶È */
-	double duration;			/* Á£×Ó³ÖĞøÊ±¼ä */
-	double size;                /* Á£×Ó³ß´ç */
-	double temperature;         /* Á£×ÓÎÂ¶È */
-	double density;             /* Á£×ÓÃÜ¶È */
+	unsigned int  r, g, b;      /* ç²’å­çš„é¢œè‰² */
+	double vx, vy, vz;          /* ç²’å­çš„å½“å‰é€Ÿåº¦ */
+	double vStarX, vStarY, vStarZ;
+	double duration;			/* ç²’å­æŒç»­æ—¶é—´ */
+	double size;                /* ç²’å­å°ºå¯¸ */
+	double temperature;         /* ç²’å­æ¸©åº¦ */
+	double density;             /* ç²’å­å¯†åº¦ */
+	Vec3 advectionTerm;
 	double force[3];
 };
 
-/* Á£×ÓÍø¸ñÀà */
+/* ç²’å­ç½‘æ ¼ç±» */
 class Grid
 {
 public:
-	Particle***   particle;               /* Á£×ÓÖ¸Õë */
-										  //int         particle_Cnt;         /* Á£×ÓÊıÄ¿ */
-	double      temp_avg;            /* ÎÂ¶ÈÌõ¼ş */
+	Particle***   particle;               /* ç²’å­æŒ‡é’ˆ */
+										  //int         particle_Cnt;         /* ç²’å­æ•°ç›® */
+	double      temp_avg;            /* æ¸©åº¦æ¡ä»¶ */
 
-									 /* ¹¹Ôìº¯Êı */
+									 /* æ„é€ å‡½æ•° */
 	Grid() {
 		particle = NULL;
 		//particle_Cnt = 0;
 		temp_avg = 0;
 	}
-	/* Îö¹¹º¯Êı */
+	/* ææ„å‡½æ•° */
 	~Grid() {
 		for (int i = 0; i < particle_Grid_Len; i++)
 			for (int j = 0; j < particle_Grid_Len; j++) {
@@ -51,7 +54,7 @@ public:
 		particle = NULL;
 	}
 
-	/* ´´½¨Á£×ÓÊı×é */
+	/* åˆ›å»ºç²’å­æ•°ç»„ */
 	void CreateGrid(long num) {
 		if (particle)
 			delete[] particle;
@@ -70,7 +73,7 @@ public:
 
 	}
 
-	/* ÉèÖÃºÍ»ñÈ¡ÑÕÉ«ÊôĞÔ */
+	/* è®¾ç½®å’Œè·å–é¢œè‰²å±æ€§ */
 	void SetAllColor(GLint r, GLint g, GLint b) {
 		for (int i = 0; i < particle_Grid_Len; i++)
 			for (int j = 0; j < particle_Grid_Len; j++)
@@ -105,7 +108,7 @@ public:
 		return false;
 	}
 
-	/* ÉèÖÃºÍ»ñÈ¡ËÙ¶ÈÊôĞÔ */
+	/* è®¾ç½®å’Œè·å–é€Ÿåº¦å±æ€§ */
 	void SetAllVelocity(GLdouble vx, GLdouble vy, GLdouble vz) {
 		for (int i = 0; i < particle_Grid_Len; i++)
 			for (int j = 0; j < particle_Grid_Len; j++)
@@ -140,7 +143,7 @@ public:
 		return false;
 	}
 
-	/* ÉèÖÃºÍ»ñÈ¡³ÖĞøÊ±¼ä */
+	/* è®¾ç½®å’Œè·å–æŒç»­æ—¶é—´ */
 	void SetAllDuration(GLdouble duration) {
 		for (int i = 0; i < particle_Grid_Len; i++)
 			for (int j = 0; j < particle_Grid_Len; j++)
@@ -169,7 +172,7 @@ public:
 		return false;
 	}
 
-	/* ÉèÖÃºÍ»ñÈ¡³ß´çÊôĞÔ */
+	/* è®¾ç½®å’Œè·å–å°ºå¯¸å±æ€§ */
 	void SetAllSize(GLdouble size) {
 		for (int i = 0; i < particle_Grid_Len; i++)
 			for (int j = 0; j < particle_Grid_Len; j++)
@@ -198,7 +201,7 @@ public:
 		return false;
 	}
 
-	/* ÉèÖÃºÍ»ñÈ¡ÎÂ¶ÈĞÅÏ¢ */
+	/* è®¾ç½®å’Œè·å–æ¸©åº¦ä¿¡æ¯ */
 	void SetAllTemperature(GLdouble temp) {
 		for (int i = 0; i < particle_Grid_Len; i++)
 			for (int j = 0; j < particle_Grid_Len; j++)
@@ -236,7 +239,7 @@ public:
 		temp_avg /= (particle_Grid_Len - 2)* (particle_Grid_Len - 2)* (particle_Grid_Len - 2);
 	}
 
-	/* ÉèÖÃºÍ»ñÈ¡ÃÜ¶ÈĞÅÏ¢ */
+	/* è®¾ç½®å’Œè·å–å¯†åº¦ä¿¡æ¯ */
 	void SetAllDensity(GLdouble density) {
 		for (int i = 0; i < particle_Grid_Len; i++)
 			for (int j = 0; j < particle_Grid_Len; j++)
@@ -265,22 +268,24 @@ public:
 		return false;
 	}
 
-	/* »ñÈ¡Á£×ÓÊı×éµØÖ· */
+	/* è·å–ç²’å­æ•°ç»„åœ°å€ */
 	//Particle *GetParticle() { 
 	//	return particle; 
 	//}
 
-	/* »ñµÃÁ£×ÓµÄÊıÄ¿ */
+	/* è·å¾—ç²’å­çš„æ•°ç›® */
 	//int GetParticleCnt() { return particle_Cnt; }
 
-	/* ÉèÖÃÁ£×ÓµÄËùÓĞÊôĞÔ */
-	int SetAllData(int i, int j, int k,                /* ÏÂ±ê */
-		GLint r, GLint g, GLint b,                /* ÑÕÉ« */
-		GLdouble vx, GLdouble vy, GLdouble vz,    /* ËÙ¶È */
-		GLdouble size,                              /* ´óĞ¡ */
-		GLdouble duration,                          /* ³ÖĞøÊ±¼ä */
-		GLdouble temperature,                       /* ÎÂ¶È */
-		GLdouble density                            /* ÃÜ¶È */
+	/* è®¾ç½®ç²’å­çš„æ‰€æœ‰å±æ€§ */
+	int SetAllData(int i, int j, int k,                /* ä¸‹æ ‡ */
+		GLint r, GLint g, GLint b,                /* é¢œè‰² */
+		GLdouble vx, GLdouble vy, GLdouble vz,    /* é€Ÿåº¦ */
+		GLdouble vStarX,GLdouble vStarY,GLdouble vStarZ,
+		GLdouble size,                              /* å¤§å° */
+		GLdouble duration,                          /* æŒç»­æ—¶é—´ */
+		GLdouble temperature,                       /* æ¸©åº¦ */
+		GLdouble density,                            /* å¯†åº¦ */
+		Vec3 advectionTerm
 		) {
 		if (i >= 0 && i < particle_Grid_Len
 			&& j >= 0 && j < particle_Grid_Len
@@ -291,23 +296,29 @@ public:
 			particle[i][j][k].vx = vx;
 			particle[i][j][k].vy = vy;
 			particle[i][j][k].vz = vz;
+			particle[i][j][k].vStarX = vStarX;
+			particle[i][j][k].vStarY = vStarY;
+			particle[i][j][k].vStarZ = vStarZ;
 			particle[i][j][k].size = size;
 			particle[i][j][k].duration = duration;
 			particle[i][j][k].temperature = temperature;
 			particle[i][j][k].density = density;
+			particle[i][j][k].advectionTerm= advectionTerm;
 			return true;
 		}
 		return false;
 	}
 
-	/* »ñµÃÁ£×ÓËùÓĞµÄÊôĞÔ */
-	int GetAllData(int i, int j, int k,              /* ÏÂ±ê */
-		GLint &r, GLint &g, GLint &b,                /* ÑÕÉ« */
-		GLdouble &vx, GLdouble &vy, GLdouble &vz,    /* ËÙ¶È */
-		GLdouble &size,                              /* ´óĞ¡ */
-		GLdouble &duration,                          /* ³ÖĞøÊ±¼ä */
-		GLdouble &temperature,                       /* ÎÂ¶È */
-		GLdouble &density                            /* ÃÜ¶È */
+	/* è·å¾—ç²’å­æ‰€æœ‰çš„å±æ€§ */
+	int GetAllData(int i, int j, int k,              /* ä¸‹æ ‡ */
+		GLint &r, GLint &g, GLint &b,                /* é¢œè‰² */
+		GLdouble &vx, GLdouble &vy, GLdouble &vz,    /* é€Ÿåº¦ */
+		GLdouble &vStarX,GLdouble &vStarY,GLdouble &vStarZ,
+		GLdouble &size,                              /* å¤§å° */
+		GLdouble &duration,                          /* æŒç»­æ—¶é—´ */
+		GLdouble &temperature,                       /* æ¸©åº¦ */
+		GLdouble &density,                            /* å¯†åº¦ */
+		Vec3 &advectionTerm
 		) {
 
 		if (i >= 0 && i < particle_Grid_Len
@@ -319,20 +330,25 @@ public:
 			vx = particle[i][j][k].vx;
 			vy = particle[i][j][k].vy;
 			vz = particle[i][j][k].vz;
+			vStarX = particle[i][j][k].vStarX;
+			vStarY = particle[i][j][k].vStarY;
+			vStarZ = particle[i][j][k].vStarZ;
 			size = particle[i][j][k].size;
 			duration = particle[i][j][k].duration;
 			temperature = particle[i][j][k].temperature;
 			density = particle[i][j][k].density;
+			advectionTerm = particle[i][j][k].advectionTerm;
 			return true;
 		}
 		return false;
 	}
 
 	void initAllData() {
+		Vec3 zero;
 		for (int i = 0; i < particle_Grid_Len; i++)
 			for (int j = 0; j < particle_Grid_Len; j++)
 				for (int k = 0; k < particle_Grid_Len; k++) {
-					SetAllData(i, j, k, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+					SetAllData(i, j, k, 192, 192, 192, 0, 0,0,0,0, 0, 0.08f, 0, 0, 0,zero);
 					for (int m = 0; m < 3; m++)
 						particle[i][j][k].force[m] = 0;
 				}
@@ -365,9 +381,9 @@ public:
 		if (i > 0 && i < particle_Grid_Len - 1
 			&& j > 0 && j < particle_Grid_Len - 1
 			&& k > 0 && k < particle_Grid_Len - 1) {
-			double alpha = 0.0001;
-			double beta = 0.0001;
-			double eposilo = 0.0001;
+			double alpha = 10;
+			double beta = 10;
+			double eposilo = 10;
 			double array_z[3] = { 0,0,1 };
 
 			double x_next_vort[3] = {};
@@ -416,4 +432,4 @@ public:
 		return false;
 	}
 
-}minus_smoke, zero_smoke, plus_smoke;
+} old_smoke, gen_smoke;

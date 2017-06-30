@@ -1,11 +1,13 @@
 #include <windows.h>
+#include <time.h>
+#include <stdlib.h>
 #include <gl\GL.h>
 #include <gl\GLU.h>
 #include <gl\glut.h>
 #include <iostream>
 
 #include "vector.hpp"
-#define particle_Grid_Len 10
+#define particle_Grid_Len 40
 
 const double h = 1.0 / particle_Grid_Len;
 
@@ -20,6 +22,7 @@ struct Particle
 	double size;                /* 粒子尺寸 */
 	double temperature;         /* 粒子温度 */
 	double density;             /* 粒子密度 */
+	bool border;                 /* 是否为边界 */
 	Vec3 advectionTerm;
 	double force[3];
 };
@@ -138,6 +141,18 @@ public:
 			vx = particle[i][j][k].vx;
 			vy = particle[i][j][k].vy;
 			vz = particle[i][j][k].vz;
+			return true;
+		}
+		return false;
+	}
+
+	bool SetVstar(int i, int j, int k) {
+		if (i >= 0 && i < particle_Grid_Len
+			&& j >= 0 && j < particle_Grid_Len
+			&& k >= 0 && k < particle_Grid_Len) {
+			particle[i][j][k].vStarX = particle[i][j][k].vx;
+			particle[i][j][k].vStarY = particle[i][j][k].vy;
+			particle[i][j][k].vStarZ = particle[i][j][k].vz;
 			return true;
 		}
 		return false;
@@ -343,14 +358,39 @@ public:
 		return false;
 	}
 
+	/* 粒子系统的初始化 */
 	void initAllData() {
 		Vec3 zero;
+		//srand(time(NULL));
+		//int r = rand() % 255;
+		//int g = rand() % 255;
+		//int b = rand() % 255;
 		for (int i = 0; i < particle_Grid_Len; i++)
 			for (int j = 0; j < particle_Grid_Len; j++)
 				for (int k = 0; k < particle_Grid_Len; k++) {
-					SetAllData(i, j, k, 192, 192, 192, 0, 0,0,0,0, 0, 0.08f, 0, 0, 0,zero);
+					SetAllData(i, j, k,100,100,100, 0, 0, 0,
+						0, 0, 0, double(1.5/particle_Grid_Len), 0, 0, 0, zero);
+					
 					for (int m = 0; m < 3; m++)
 						particle[i][j][k].force[m] = 0;
+
+					double x_loca = (i / particle_Grid_Len) - 0.5;
+					double y_loca = (j / particle_Grid_Len) - 0.5;
+					double z_loca = (k / particle_Grid_Len) - 0.5;
+
+					/* 边界的初始化 */
+					if (i == 0 || i == particle_Grid_Len - 1
+						|| j == 0 || j == particle_Grid_Len - 1
+						|| k == 0 || k == particle_Grid_Len - 1)
+						particle[i][j][k].border = true;
+
+					else if ((x_loca > -0.15 && i < x_loca < 0.15)
+						|| (y_loca > -0.15 && y_loca < 0.15)
+						|| (z_loca > -0.15 && z_loca < 0.15))
+						particle[i][j][k].border = true;
+
+					else
+						particle[i][j][k].border = false;
 				}
 	}
 
@@ -381,10 +421,10 @@ public:
 		if (i > 0 && i < particle_Grid_Len - 1
 			&& j > 0 && j < particle_Grid_Len - 1
 			&& k > 0 && k < particle_Grid_Len - 1) {
-			double alpha = 10;
-			double beta = 10;
-			double eposilo = 10;
-			double array_z[3] = { 0,0,1 };
+			double alpha = particle_Grid_Len;
+			double beta = particle_Grid_Len;
+			double eposilo = particle_Grid_Len;
+			double array_z[3] = { 0,1,0 };
 
 			double x_next_vort[3] = {};
 			double y_next_vort[3] = {};

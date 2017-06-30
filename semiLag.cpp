@@ -4,6 +4,30 @@
 
 static double p[GRID_SIZE][GRID_SIZE][GRID_SIZE];
 
+static inline double dist(const Vec3 &v1, const Vec3 &v2) {
+	return (v1.dx - v2.dx) * (v1.dx - v2.dx) +
+		(v1.dy - v2.dy) * (v1.dy - v2.dy) +
+		(v1.dz - v2.dz) * (v1.dz - v2.dz);
+}
+
+static Vec3 binary_search(const Grid &g, const Vec3 left,
+		const Vec3 right, double STEP) {
+	Vec3 mid = (left + right) * 0.5;
+	if(dist(left, right) < STEP * STEP)
+		return left;
+	int midX = floor((1.0 + mid.dx) * 0.5 * GRID_SIZE);
+	int midY = floor((1.0 + mid.dy) * 0.5 * GRID_SIZE);
+	int midZ = floor((1.0 + mid.dz) * 0.5 * GRID_SIZE);
+
+	if(g.particle[midX][midY][midZ].isOccupied)
+		return binary_search(g, mid, right, STEP);
+	else
+		return binary_search(g, left, mid, STEP);
+	
+	/* Make gcc happy */
+	return Vec3();
+}
+
 void poissonSolver(Grid &g) {
 	/* User of this function should provide in g 
 	 * the heuristic guessing of the p value
@@ -441,11 +465,6 @@ static double vZInterpolateWrapper(const Vec3 &loc, const Grid &g) {
 	return interpolate(loc, dataVZ, bBox);
 }
 
-static inline double dist(const Vec3 &v1, const Vec3 &v2) {
-	return (v1.dx - v2.dx) * (v1.dx - v2.dx) +
-		(v1.dy - v2.dy) * (v1.dy - v2.dy) +
-		(v1.dz - v2.dz) * (v1.dz - v2.dz);
-}
 /* 
  * We need to calculate advection in multiple dimension(3d)
  * and for temperature and density the equation looks like
@@ -462,6 +481,54 @@ void semiLagrangeCalc(const Grid &old, Grid &gen) {
 	for(int i = 0; i != GRID_SIZE; ++i) {
 		for(int j = 0; j != GRID_SIZE; ++j) {
 			for(int k = 0; k != GRID_SIZE; ++k) {
+
+				if(old.particle[i][j][k].isOccupied) {
+					gen.particle[i][j][k].vx = old.particle[i][j][k].vx;
+					gen.particle[i][j][k].vy = old.particle[i][j][k].vy;
+					gen.particle[i][j][k].vz = old.particle[i][j][k].vz;
+					/* Grid that is occupied is made zero_density */
+					if(old.particle[i][j][k].boarder) {
+						int count = 0;
+						if(i - 1 >= 0 && !old.particle[i - 1][j][k].isOccupied) {
+							gen.particle[i][j][k].density +=
+								old.particle[i - 1][j][k].density;
+							++count;
+						}
+						if(j - 1 >= 0 && !old.particle[i][j - 1][k].isOccupied) {
+							gen.particle[i][j][k].density +=
+								old.particle[i][j - 1][k].density;
+							++count;
+						}
+						if(k - 1 >= 0 && !old.particle[i][j][k - 1].isOccupied) {
+							gen.particle[i][j][k].density +=
+								old.particle[i][j][k - 1].density;
+							++count;
+						}
+						if(i + 1 < GRID_SIZE && !old.particle[i + 1][j][k].isOccupied) {
+							gen.particle[i][j][k].density +=
+								old.particle[i + 1][j][k].density;
+							++count;
+						}
+						if(j + 1 < GRID_SIZE && !old.particle[i][j + 1][k].isOccupied) {
+							gen.particle[i][j][k].density +=
+								old.particle[i][j + 1][k].density;
+							++count;
+						}
+						if(k + 1 < GRID_SIZE && !old.particle[i][j][k + 1].isOccupied) {
+							gen.particle[i][j][k].density +=
+								old.particle[i][j][k + 1].density;
+							++count;
+						}
+						gen.particle[i][j][k].density /= static_cast<double>(count);
+					}
+					else gen.particle[i][j][k].density = 0.0;
+					gen.particle[i][j][k].temperature =
+						old.particle[i][j][k].temperature;
+					gen.particle[i][j][k].advectionTerm = old.particle[i][j][k].advectionTerm;
+					continue;
+				}
+
+
 				Vec3 curr(
 						-1 + STEP * (i + 0.5),
 						-1 + STEP * (j + 0.5),
@@ -496,13 +563,45 @@ void semiLagrangeCalc(const Grid &old, Grid &gen) {
 	for(int i = 0; i != GRID_SIZE; ++i) {
 		for(int j = 0; j != GRID_SIZE; ++j) {
 			for(int k = 0; k != GRID_SIZE; ++k) {
+
+				gen.particle[i][j][k].boarder = old.particle[i][j][k].boarder;
+				gen.particle[i][j][k].isOccupied = old.particle[i][j][k].isOccupied;
+
+				if(gen.particle[i][j][k].isOccupied)
+					continue;
+
 				Vec3 curr(
 						-1 + STEP * (i + 0.5),
 						-1 + STEP * (j + 0.5),
 						-1 + STEP * (k + 0.5)
 						);
-				Vec2 tempXdensY = tempXdensYInterpolationWrapper(
-						curr - gen.particle[i][j][k].advectionTerm, old);
+				Vec3 target = curr - gen.particle[i][j][k].advectionTerm;
+
+				int midX = floor((1.0 + target.dx) * 0.5 * GRID_SIZE);
+				int midY = floor((1.0 + target.dy) * 0.5 * GRID_SIZE);
+				int midZ = floor((1.0 + target.dz) * 0.5 * GRID_SIZE);
+
+				Vec2 tempXdensY;
+
+				if(old.particle[midX][midY][midZ].isOccupied) {
+					target = binary_search(old, target, curr, 0.10 * STEP);
+					midX = floor((1.0 + target.dx) * 0.5 * GRID_SIZE);
+					midY = floor((1.0 + target.dy) * 0.5 * GRID_SIZE);
+					midZ = floor((1.0 + target.dz) * 0.5 * GRID_SIZE);
+					gen.particle[i][j][k].vx = old.particle[midX][midY][midZ].vx;
+					gen.particle[i][j][k].vy = old.particle[midX][midY][midZ].vy;
+					gen.particle[i][j][k].vz = old.particle[midX][midY][midZ].vz;
+					tempXdensY = tempXdensYInterpolationWrapper(target, old);
+
+					gen.particle[i][j][k].temperature = tempXdensY.dx;
+					gen.particle[i][j][k].density = tempXdensY.dy;
+
+					gen.particle[i][j][k].advectionTerm = target;
+
+					continue;
+				}
+				tempXdensY = tempXdensYInterpolationWrapper(target, old);
+
 				gen.particle[i][j][k].temperature = tempXdensY.dx;
 				gen.particle[i][j][k].density = tempXdensY.dy;
 				

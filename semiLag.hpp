@@ -19,11 +19,11 @@
 
 #define GRID_SIZE particle_Grid_Len
 /* This controlled deltaT between to grid */
-#define TIME_STEP 0.05
+#define TIME_STEP 0.10
 /* This controlled the iteration in the semi-lagrangian scheme */
-#define ITER_TIMES 20
+#define ITER_TIMES 40
 /* This controlled the iterating time of the poisson solver */
-#define POISSON_ITER 20
+#define POISSON_ITER 40
 
 /*
  *#define TEMPERATURE 0

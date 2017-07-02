@@ -2,7 +2,10 @@
 
 #include "semiLag.hpp"
 
-static double p[GRID_SIZE][GRID_SIZE][GRID_SIZE];
+
+/* p[i,j,k] at position [i * GRID_SIZE * GRID_SIZE + j * GRID_SIZE + k] */
+static double pFirst[GRID_SIZE * GRID_SIZE * GRID_SIZE];
+static double pSecond[GRID_SIZE * GRID_SIZE * GRID_SIZE];
 
 static inline double dist(const Vec3 &v1, const Vec3 &v2) {
 	return (v1.dx - v2.dx) * (v1.dx - v2.dx) +
@@ -28,7 +31,7 @@ static Vec3 binary_search(const Grid &g, const Vec3 left,
 	return Vec3();
 }
 
-void poissonSolver(Grid &g) {
+static double *poissonSolver(Grid &g) {
 	/* User of this function should provide in g 
 	 * the heuristic guessing of the p value
 	 * and should guarantee that v equals to u*
@@ -38,6 +41,10 @@ void poissonSolver(Grid &g) {
 	const double d = STEP * STEP;
 	const double a = d / 6.0;
 	const double af = d * d / 6.0;
+
+	double *pold = pFirst;
+	memset(pFirst, 0, GRID_SIZE * GRID_SIZE * GRID_SIZE);
+	double *pnew = pSecond;
 	int iter = 0;
 	double maxDIFF = 0;
 	do{
@@ -66,25 +73,23 @@ void poissonSolver(Grid &g) {
 					if(k - 1 >= 0)
 						divUStar -= g.particle[i][j][k - 1].vz;
 
-					p[i][j][k] = a * (
-							g.particle[iMinus][j][k].p + g.particle[iPlus][j][k].p +
-							g.particle[i][jMinus][k].p + g.particle[i][jPlus][k].p +
-							g.particle[i][j][kMinus].p + g.particle[i][j][kPlus].p
+					pnew[FETCH(i, j, k)] = a * (
+							pold[FETCH(iMinus, j, k)] + pold[FETCH(iPlus, j, k)] +
+							pold[FETCH(i, jMinus, k)] + pold[FETCH(i, jPlus, k)] +
+							pold[FETCH(i, j, kMinus)] + pold[FETCH(i, j, kPlus)]
 							) - af * divUStar / TIME_STEP;
-					if(p[i][j][k] - g.particle[i][j][k].p > maxDIFF)
-						maxDIFF = p[i][j][k] - g.particle[i][j][k].p;
+					if(pnew[FETCH(i, j, k)] - pold[FETCH(i, j, k)] > maxDIFF)
+						maxDIFF = pnew[FETCH(i, j, k)] - pold[FETCH(i, j, k)];
 				}
 			}
 		}
-		for(int i = 0; i != GRID_SIZE; ++i) {
-			for(int j = 0; j != GRID_SIZE; ++j) {
-				for(int k = 0; k != GRID_SIZE; ++k) {
-					g.particle[i][j][k].p = p[i][j][k];
-				}
-			}
-		}
+		double *temp = pold;
+		pold = pnew;
+		pnew = temp;
 		++iter;
 	}while(iter < POISSON_ITER && maxDIFF > 0.05);
+
+	return pold;
 }
 
 
@@ -404,7 +409,7 @@ static double vXInterpolateWrapper(const Vec3 &loc, const Grid &g) {
 					continue;
 				if(zLow + k - 1 < 0 || zLow + k - 1 >= GRID_SIZE)
 					continue;
-				dataVX[i][j][k] = g.particle[xLow + i - 1][yLow + j - 1][zLow + k - 1].vStarX;
+				dataVX[i][j][k] = g.particle[xLow + i - 1][yLow + j - 1][zLow + k - 1].vx;
 			}
 		}
 	}
@@ -431,7 +436,7 @@ static double vYInterpolateWrapper(const Vec3 &loc, const Grid &g) {
 					continue;
 				if(zLow + k - 1 < 0 || zLow + k - 1 >= GRID_SIZE)
 					continue;
-				dataVY[i][j][k] = g.particle[xLow + i - 1][yLow + j - 1][zLow + k - 1].vStarY;
+				dataVY[i][j][k] = g.particle[xLow + i - 1][yLow + j - 1][zLow + k - 1].vy;
 			}
 		}
 	}
@@ -458,7 +463,7 @@ static double vZInterpolateWrapper(const Vec3 &loc, const Grid &g) {
 					continue;
 				if(zLow + k - 1 < 0 || zLow + k - 1 >= GRID_SIZE)
 					continue;
-				dataVZ[i][j][k] = g.particle[xLow + i - 1][yLow + j - 1][zLow + k - 1].vStarZ;
+				dataVZ[i][j][k] = g.particle[xLow + i - 1][yLow + j - 1][zLow + k - 1].vz;
 			}
 		}
 	}
@@ -475,9 +480,44 @@ static double vZInterpolateWrapper(const Vec3 &loc, const Grid &g) {
 /* This calculator presumes that the velocity field of the 
  * last step i.e. that in the old Grid is one with forcing 
  * terms added back */
-void semiLagrangeCalc(const Grid &old, Grid &gen) {
+
+/* UPDATE 2017/07/02 */
+void semiLagrangeCalc(Grid &old, Grid &gen) {
 	/* Then we'll solve the advection term */
 	double STEP = 2.0 / GRID_SIZE;
+
+	double *p = poissonSolver(old);
+
+	for(int i = 0; i != GRID_SIZE; ++i) {
+		int iPlus = i + 1 >= GRID_SIZE ? i : i + 1;
+		for(int j = 0; j != GRID_SIZE; ++j) {
+			int jPlus = j + 1 >= GRID_SIZE ? j : j + 1;
+			for(int k = 0; k != GRID_SIZE; ++k) {
+				int kPlus = k + 1 >= GRID_SIZE ? k : k + 1;
+				/* First subtract influence of p to 
+				 * make the fluid incompressible
+				 */
+				double dpX = 
+					(p[FETCH(iPlus, j, k)] - p[FETCH(i, j, k)]) / STEP;
+				double dpY =
+					(p[FETCH(i, jPlus, k)] - p[FETCH(i, j, k)]) / STEP;
+				double dpZ =
+					(p[FETCH(i, j, kPlus)] - p[FETCH(i, j, k)]) / STEP;
+				old.particle[i][j][k].vx -= dpX * TIME_STEP;
+				old.particle[i][j][k].vy -= dpY * TIME_STEP;
+				old.particle[i][j][k].vz -= dpZ * TIME_STEP;
+
+				/* We'll calculate vStar next */
+				old.particle[i][j][k].vStarX = 1.5 * old.particle[i][j][k].vx
+					- 0.5 * gen.particle[i][j][k].vx;
+				old.particle[i][j][k].vStarY = 1.5 * old.particle[i][j][k].vy
+					- 0.5 * gen.particle[i][j][k].vy;
+				old.particle[i][j][k].vStarZ = 1.5 * old.particle[i][j][k].vz
+					- 0.5 * gen.particle[i][j][k].vz;
+			}
+		}
+	}
+
 	for(int i = 0; i != GRID_SIZE; ++i) {
 		for(int j = 0; j != GRID_SIZE; ++j) {
 			for(int k = 0; k != GRID_SIZE; ++k) {
@@ -563,9 +603,11 @@ void semiLagrangeCalc(const Grid &old, Grid &gen) {
 	for(int i = 0; i != GRID_SIZE; ++i) {
 		for(int j = 0; j != GRID_SIZE; ++j) {
 			for(int k = 0; k != GRID_SIZE; ++k) {
-
+				
+				/* This part can be varied if new movement option is activated */
 				gen.particle[i][j][k].boarder = old.particle[i][j][k].boarder;
 				gen.particle[i][j][k].isOccupied = old.particle[i][j][k].isOccupied;
+				/* We can use determined moving velocity to calculate new object position */
 
 				if(gen.particle[i][j][k].isOccupied)
 					continue;
@@ -583,7 +625,12 @@ void semiLagrangeCalc(const Grid &old, Grid &gen) {
 
 				Vec2 tempXdensY;
 
-				if(old.particle[midX][midY][midZ].isOccupied) {
+				if(
+						midX >= 0 && midX < GRID_SIZE &&
+						midY >= 0 && midY < GRID_SIZE &&
+						midZ >= 0 && midZ < GRID_SIZE &&
+						old.particle[midX][midY][midZ].isOccupied
+						) {
 					target = binary_search(old, target, curr, 0.10 * STEP);
 					midX = floor((1.0 + target.dx) * 0.5 * GRID_SIZE);
 					midY = floor((1.0 + target.dy) * 0.5 * GRID_SIZE);
@@ -606,65 +653,31 @@ void semiLagrangeCalc(const Grid &old, Grid &gen) {
 				gen.particle[i][j][k].density = tempXdensY.dy;
 				
 				/* Then interpolate vX, vY, vZ */
-				Vec3 vXAlpha = gen.particle[i][j][k].advectionTerm;
-				if(i + 1 < GRID_SIZE) {
-					vXAlpha = 
-						(vXAlpha + gen.particle[i + 1][j][k].advectionTerm) * 0.5;
-				}
-				Vec3 vYAlpha = gen.particle[i][j][k].advectionTerm;
-				if(j + 1 < GRID_SIZE) {
-					vYAlpha = 
-						(vYAlpha + gen.particle[i][j + 1][k].advectionTerm) * 0.5;
-				}
-				Vec3 vZAlpha = gen.particle[i][j][k].advectionTerm;
-				if(j + 1 < GRID_SIZE) {
-					vZAlpha = 
-						(vZAlpha + gen.particle[i][j][k + 1].advectionTerm) * 0.5;
-				}
-				Vec3 locX = curr;
-				locX.dx += 0.5 * STEP;
-				Vec3 locY = curr;
-				locY.dy += 0.5 * STEP;
-				Vec3 locZ = curr;
-				locZ.dz += 0.5 * STEP;
-				gen.particle[i][j][k].vx = vXInterpolateWrapper(locX - vXAlpha, old);
-				gen.particle[i][j][k].vy = vYInterpolateWrapper(locY - vYAlpha, old);
-				gen.particle[i][j][k].vz = vZInterpolateWrapper(locZ - vZAlpha, old);
-
+				gen.particle[i][j][k].vx = vXInterpolateWrapper(target, old);
+				gen.particle[i][j][k].vy = vYInterpolateWrapper(target, old);
+				gen.particle[i][j][k].vz = vZInterpolateWrapper(target, old);
 			}
 		}
 	}
-	for(int i = 0; i != GRID_SIZE; ++i)
-		for(int j = 0; j != GRID_SIZE; ++j)
-			for(int k = 0; k != GRID_SIZE; ++k)
-				gen.particle[i][j][k].p = old.particle[i][j][k].p;
-	poissonSolver(gen);
+	/* Noticed that velocity at point [i, j, k] is of center point of voxel */
 	for(int i = 0; i != GRID_SIZE; ++i) {
 		int iPlus = i + 1 >= GRID_SIZE ? i : i + 1;
 		for(int j = 0; j != GRID_SIZE; ++j) {
 			int jPlus = j + 1 >= GRID_SIZE ? j : j + 1;
 			for(int k = 0; k != GRID_SIZE; ++k) {
 				int kPlus = k + 1 >= GRID_SIZE ? k : k + 1;
-				/* First subtract influence of p to 
-				 * make the fluid incompressible
-				 */
-				double dpX = 
-					(gen.particle[iPlus][j][k].p - gen.particle[i][j][k].p) / STEP;
-				double dpY =
-					(gen.particle[i][jPlus][k].p - gen.particle[i][j][k].p) / STEP;
-				double dpZ =
-					(gen.particle[i][j][kPlus].p - gen.particle[i][j][k].p) / STEP;
-				gen.particle[i][j][k].vx -= dpX * TIME_STEP;
-				gen.particle[i][j][k].vy -= dpY * TIME_STEP;
-				gen.particle[i][j][k].vz -= dpZ * TIME_STEP;
 
-				/* We'll calculate vStar next */
-				gen.particle[i][j][k].vStarX = 1.5 * gen.particle[i][j][k].vx
-					- 0.5 * old.particle[i][j][k].vx;
-				gen.particle[i][j][k].vStarY = 1.5 * gen.particle[i][j][k].vy
-					- 0.5 * old.particle[i][j][k].vy;
-				gen.particle[i][j][k].vStarZ = 1.5 * gen.particle[i][j][k].vz
-					- 0.5 * old.particle[i][j][k].vz;
+				if(gen.particle[i][j][k].isOccupied) {
+					gen.particle[i][j][k].vx = old.particle[i][j][k].vx;
+					gen.particle[i][j][k].vy = old.particle[i][j][k].vy;
+					gen.particle[i][j][k].vz = old.particle[i][j][k].vz;
+				}
+				gen.particle[i][j][k].vx = 
+					(gen.particle[i][j][k].vx + gen.particle[iPlus][j][k].vx) / 2.0;
+				gen.particle[i][j][k].vy = 
+					(gen.particle[i][j][k].vy + gen.particle[i][jPlus][k].vy) / 2.0;
+				gen.particle[i][j][k].vz = 
+					(gen.particle[i][j][k].vx + gen.particle[i][j][kPlus].vx) / 2.0;
 			}
 		}
 	}

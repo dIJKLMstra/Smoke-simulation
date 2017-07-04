@@ -21,9 +21,9 @@
 /* This controlled deltaT between to grid */
 #define TIME_STEP 0.05
 /* This controlled the iteration in the semi-lagrangian scheme */
-#define ITER_TIMES 40
+#define ITER_TIMES 20
 /* This controlled the iterating time of the poisson solver */
-#define POISSON_ITER 100
+#define POISSON_ITER 20
 
 #define FETCH(i, j, k) ((i) * GRID_SIZE * GRID_SIZE + (j) * GRID_SIZE + (k))
 
@@ -32,6 +32,6 @@
  *#define DENSITY 1
  */
 
-void semiLagrangeCalc(Grid &old, Grid &gen);
+void semiLagrangeCalc(const Grid &old, Grid &gen);
 
 #endif

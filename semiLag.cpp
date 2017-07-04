@@ -87,7 +87,7 @@ static double *poissonSolver(Grid &g) {
 		pold = pnew;
 		pnew = temp;
 		++iter;
-	}while(iter < POISSON_ITER && maxDIFF > 0.05);
+	}while(iter < POISSON_ITER && maxDIFF > 0.01);
 
 	return pold;
 }
@@ -152,14 +152,25 @@ static const double interpolate(const Vec3 &v, double data[4][4][4], const Vec3 
 			 *dk = (dk * deltaK < 0 ? 0 : dk);
 			 *dkPlus = (dkPlus * deltaK < 0 ? 0 : dkPlus);
 			 */
-			if(dk * deltaK <= 0 || dkPlus * deltaK <= 0)
-				dk = dkPlus = 0;
+			/*
+			 *if(dk * deltaK <= 0)
+			 *    dk = 0;
+			 *if(dkPlus * deltaK <= 0)
+			 *    dkPlus = 0;
+			 */
 
 			/* The article got this wrong */
 			double coeffA3 = dk + dkPlus - deltaK * 2;
 			double coeffA2 = deltaK * 3 - dk * 2 - dkPlus;
 			double coeffA1 = dk;
 			double coeffA0 = data[i][j][1];
+
+			if(coeffA3 * deltaK <= 0 || coeffA2 * deltaK <= 0 || coeffA1 * deltaK <= 0) {
+				coeffA3 = - deltaK * 2;
+				coeffA2 = deltaK * 3;
+				coeffA1 = 0;
+			}
+
 			data[i][j][0] = coeffA3 * cubicDiff + coeffA2 * quadDiff + coeffA1 * diff + coeffA0;
 		}
 		/* Interpolate along second axis */
@@ -184,14 +195,25 @@ static const double interpolate(const Vec3 &v, double data[4][4][4], const Vec3 
 		 *dk = (dk * deltaK < 0 ? 0 : dk);
 		 *dkPlus = (dkPlus * deltaK < 0 ? 0 : dkPlus);
 		 */
-		if(dk * deltaK <= 0 || dkPlus * deltaK <= 0)
-			dk = dkPlus = 0;
+		/*
+		 *if(dk * deltaK <= 0)
+		 *    dk = 0;
+		 *if(dkPlus * deltaK <= 0)
+		 *    dkPlus = 0;
+		 */
 
 		/* The article got this wrong */
 		double coeffA3 = dk + dkPlus - deltaK * 2;
 		double coeffA2 = deltaK * 3 - dk * 2 - dkPlus;
 		double coeffA1 = dk;
 		double coeffA0 = data[i][1][0];
+
+		if(coeffA3 * deltaK <= 0 || coeffA2 * deltaK <= 0 || coeffA1 * deltaK <= 0) {
+			coeffA3 = - deltaK * 2;
+			coeffA2 = deltaK * 3;
+			coeffA1 = 0;
+		}
+
 		data[i][0][0] = coeffA3 * cubicDiff + coeffA2 * quadDiff + 
 			coeffA1 * diff + coeffA0;
 		/*
@@ -225,14 +247,25 @@ static const double interpolate(const Vec3 &v, double data[4][4][4], const Vec3 
 	 *dk = (dk * deltaK < 0 ? 0 : dk);
 	 *dkPlus = (dkPlus * deltaK < 0 ? 0 : dkPlus);
 	 */
-	if(dk * deltaK <= 0 || dkPlus * deltaK <= 0)
-		dk = dkPlus = 0;
+	/*
+	 *if(dk * deltaK <= 0)
+	 *    dk = 0;
+	 *if(dkPlus * deltaK <= 0)
+	 *    dkPlus = 0;
+	 */
 
 	/* The article got this wrong */
 	double coeffA3 = dk + dkPlus - deltaK * 2;
 	double coeffA2 = deltaK * 3 - dk * 2 - dkPlus;
 	double coeffA1 = dk;
 	double coeffA0 = data[1][0][0];
+
+	if(coeffA3 * deltaK <= 0 || coeffA2 * deltaK <= 0 || coeffA1 * deltaK <= 0) {
+		coeffA3 = - deltaK * 2;
+		coeffA2 = deltaK * 3;
+		coeffA1 = 0;
+	}
+
 	data[0][0][0] = coeffA3 * cubicDiff + coeffA2 * quadDiff + coeffA1 * diff + coeffA0;
 
 	/*
@@ -507,6 +540,12 @@ void semiLagrangeCalc(Grid &old, Grid &gen) {
 				old.particle[i][j][k].vy -= dpY * TIME_STEP;
 				old.particle[i][j][k].vz -= dpZ * TIME_STEP;
 
+				/*
+				 *std::cout << old.particle[i][j][k].vx
+				 *    << ' ' << old.particle[i][j][k].vy
+				 *    << ' ' << old.particle[i][j][k].vz << std::endl;
+				 */
+
 				/* We'll calculate vStar next */
 				old.particle[i][j][k].vStarX = 1.5 * old.particle[i][j][k].vx
 					- 0.5 * gen.particle[i][j][k].vx;
@@ -579,7 +618,7 @@ void semiLagrangeCalc(Grid &old, Grid &gen) {
 				Vec3 newAlpha = velocityInterpolationWrapper(curr - alpha * 0.5, old)
 					* TIME_STEP;
 				int iter = 1;
-				while(dist(alpha, newAlpha) < 0.05 && iter < ITER_TIMES) {
+				while(dist(alpha, newAlpha) < 0.01 && iter < ITER_TIMES) {
 					alpha = newAlpha;
 					/* use vStar to interpolate */
 					newAlpha = velocityInterpolationWrapper(curr - alpha * 0.5, old)

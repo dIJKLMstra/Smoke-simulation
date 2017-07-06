@@ -529,7 +529,9 @@ void semiLagrangeCalc(const Grid &old, Grid &gen) {
 						-1 + STEP * (k + 0.5)
 						);
 				/* Solve equation use original advectionTerm */
-				Vec3 alpha = Vec3(old.particle[i][j][k].vStarX, old.particle[i][j][k].vStarY, old.particle[i][j][k].vStarZ);
+				Vec3 alpha = Vec3(old.particle[i][j][k].vStarX * TIME_STEP,
+						old.particle[i][j][k].vStarY * TIME_STEP,
+						old.particle[i][j][k].vStarZ * TIME_STEP);
 				Vec3 newAlpha = velocityInterpolationWrapper(curr - alpha * 0.5, old)
 					* TIME_STEP;
 				int iter = 1;
@@ -675,7 +677,9 @@ void semiLagrangeCalc(const Grid &old, Grid &gen) {
 						-1 + STEP * (k + 0.5)
 						);
 				/* Solve equation use original advectionTerm */
-				Vec3 alpha = Vec3(gen.particle[i][j][k].vStarX, old.particle[i][j][k].vStarY, old.particle[i][j][k].vStarZ);
+				Vec3 alpha = Vec3(gen.particle[i][j][k].vStarX * TIME_STEP,
+						old.particle[i][j][k].vStarY * TIME_STEP,
+						old.particle[i][j][k].vStarZ * TIME_STEP);
 				Vec3 newAlpha = velocityInterpolationWrapper(curr - alpha * 0.5, gen)
 					* TIME_STEP;
 				int iter = 1;

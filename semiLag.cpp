@@ -125,9 +125,9 @@ static double *poissonSolver(const Grid &g) {
 		}
 		cout << endl;
 	}
+#endif
 	return pold;
 }
-#endif
 
 
 /* Hermite Interpolation */

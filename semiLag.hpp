@@ -15,15 +15,26 @@
 
 /* comment this out when
  * using it officially */
-#include "myGrid.hpp"
+/*
+ *#define DEBUG
+ */
 
+#ifdef DEBUG
+#include "myGrid.hpp"
+#define GRID_SIZE 10
+#endif
+
+#ifndef DEBUG
 #define GRID_SIZE particle_Grid_Len
+#endif
 /* This controlled deltaT between to grid */
 #define TIME_STEP 0.01
 /* This controlled the iteration in the semi-lagrangian scheme */
 #define ITER_TIMES 40
 /* This controlled the iterating time of the poisson solver */
 #define POISSON_ITER 40
+
+#define CONTROL 0.00000001
 
 #define FETCH(i, j, k) ((i) * GRID_SIZE * GRID_SIZE + (j) * GRID_SIZE + (k))
 

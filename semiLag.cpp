@@ -2,6 +2,27 @@
 
 #include "semiLag.hpp"
 
+#ifdef DEBUG
+
+#include <string>
+using namespace std;
+
+static const double interpolate(const Vec3 &v, double data[4][4][4], const Vec3 boundingBox[4][4][4]);
+static const double interpolate(const Vec3 &v, double data[4][4][4], const Vec3 boundingBox[4][4][4], string s) {
+	double result = interpolate(v, data, boundingBox);
+	if(result < 0){
+		cout << "target: " << endl;
+		cout << v.dx << ' ' << v.dy << ' ' << v.dz << endl;
+		cout << "boundingBox: " << endl;
+		cout <<boundingBox[1][1][1].dx << ' ' << boundingBox[1][1][1].dy << ' '
+			<< boundingBox[1][1][1].dz << endl;
+		cout <<boundingBox[2][2][2].dx << ' ' << boundingBox[2][2][2].dy << ' '
+			<< boundingBox[2][2][2].dz << endl;
+	}
+	return result;
+}
+#endif
+
 
 /* p[i,j,k] at position [i * GRID_SIZE * GRID_SIZE + j * GRID_SIZE + k] */
 static double pFirst[GRID_SIZE * GRID_SIZE * GRID_SIZE];
@@ -80,6 +101,9 @@ static double *poissonSolver(const Grid &g) {
 							) - af * divUStar / TIME_STEP;
 					if(pnew[FETCH(i, j, k)] - pold[FETCH(i, j, k)] > maxDIFF)
 						maxDIFF = pnew[FETCH(i, j, k)] - pold[FETCH(i, j, k)];
+					/*
+					 *std::cout << pnew[FETCH(i,j,k)] - pold[FETCH(i,j,k)] << std::endl;
+					 */
 				}
 			}
 		}
@@ -87,10 +111,23 @@ static double *poissonSolver(const Grid &g) {
 		pold = pnew;
 		pnew = temp;
 		++iter;
-	}while(iter < POISSON_ITER && maxDIFF > 0.01);
+	}while(iter < POISSON_ITER /*&& maxDIFF > 0.000001*/);
 
+#ifdef DEBUG
+	for(int j = 0; j != GRID_SIZE; ++j) {
+		if(j != 5)
+			continue;
+		for(int i = 0; i != GRID_SIZE; ++i) {
+			for(int k = 0; k != GRID_SIZE; ++k) {
+				cout << pold[i * GRID_SIZE * GRID_SIZE + j * GRID_SIZE + k] << ' ';
+			}
+			cout << endl;
+		}
+		cout << endl;
+	}
 	return pold;
 }
+#endif
 
 
 /* Hermite Interpolation */
@@ -142,6 +179,10 @@ static const double interpolate(const Vec3 &v, double data[4][4][4], const Vec3 
 
 				continue;
 			}
+			if(std::abs(diff - 1.0) < 0.0001) {
+				data[i][j][0] = data[i][j][2];
+				continue;
+			}
 			double quadDiff = diff * diff;
 			double cubicDiff = quadDiff * diff;
 			double deltaK = data[i][j][2] - data[i][j][1];
@@ -183,6 +224,10 @@ static const double interpolate(const Vec3 &v, double data[4][4][4], const Vec3 
 			 *    std::cout << data[i][0][0] << std::endl;
 			 */
 
+			continue;
+		}
+		if(std::abs(diff - 1.0) < 0.0001) {
+			data[i][0][0] = data[i][2][0];
 			continue;
 		}
 		double quadDiff = diff * diff;
@@ -236,6 +281,9 @@ static const double interpolate(const Vec3 &v, double data[4][4][4], const Vec3 
 		 */
 
 		return data[1][0][0];
+	}
+	if(std::abs(diff - 1.0) < 0.0001) {
+		return data[2][0][0];
 	}
 	double quadDiff = diff * diff;
 	double cubicDiff = quadDiff * diff;
@@ -322,17 +370,6 @@ static Vec2 tempXdensYInterpolationWrapper(const Vec3&loc, const Grid &g) {
 	Vec2 v;
 	v.dx = interpolate(loc, dataTemp, bBox);
 	v.dy = interpolate(loc, dataDens, bBox);
-
-	/*
-	 *if(v.dy < 0) {
-	 *    std::cout << loc.dx << ' ' << loc.dy << ' ' << loc.dz << std::endl;
-	 *    std::cout << bBox[1][1][1].dx << ' ' << 
-	 *        bBox[1][1][1].dy << ' ' << bBox[1][1][1].dz << std::endl;
-	 *}
-	 */
-	/*
-	 *std::cout << v.dx << ' ' << v.dy << std::endl;
-	 */
 
 	return v;
 }
@@ -529,13 +566,13 @@ void semiLagrangeCalc(const Grid &old, Grid &gen) {
 						-1 + STEP * (k + 0.5)
 						);
 				/* Solve equation use original advectionTerm */
-				Vec3 alpha = Vec3(old.particle[i][j][k].vStarX * TIME_STEP,
-						old.particle[i][j][k].vStarY * TIME_STEP,
-						old.particle[i][j][k].vStarZ * TIME_STEP);
+				Vec3 alpha = Vec3(old.particle[i][j][k].vStarX,
+						old.particle[i][j][k].vStarY,
+						old.particle[i][j][k].vStarZ) * TIME_STEP * 0.5;
 				Vec3 newAlpha = velocityInterpolationWrapper(curr - alpha * 0.5, old)
 					* TIME_STEP;
 				int iter = 1;
-				while(dist(alpha, newAlpha) < 0.01 && iter < ITER_TIMES) {
+				while(dist(alpha, newAlpha) >= CONTROL && iter < ITER_TIMES) {
 					alpha = newAlpha;
 					/* use vStar to interpolate */
 					newAlpha = velocityInterpolationWrapper(curr - alpha * 0.5, old)
@@ -641,15 +678,20 @@ void semiLagrangeCalc(const Grid &old, Grid &gen) {
 				 */
 				if(gen.particle[i][j][k].isOccupied)
 					continue;
-				double dpX = 
-					(p[FETCH(iPlus, j, k)] - p[FETCH(i, j, k)]) / STEP;
-				double dpY =
-					(p[FETCH(i, jPlus, k)] - p[FETCH(i, j, k)]) / STEP;
-				double dpZ =
-					(p[FETCH(i, j, kPlus)] - p[FETCH(i, j, k)]) / STEP;
+				double dpX = iPlus != i ?
+					(p[FETCH(iPlus, j, k)] - p[FETCH(i, j, k)]) / STEP : 0;
+				double dpY = jPlus != j ?
+					(p[FETCH(i, jPlus, k)] - p[FETCH(i, j, k)]) / STEP : 0;
+				double dpZ = kPlus != k ?
+					(p[FETCH(i, j, kPlus)] - p[FETCH(i, j, k)]) / STEP : 0;
 				gen.particle[i][j][k].vx -= dpX * TIME_STEP;
 				gen.particle[i][j][k].vy -= dpY * TIME_STEP;
 				gen.particle[i][j][k].vz -= dpZ * TIME_STEP;
+#ifdef DEBUG
+				/*
+				 *cout << dpX << ' ' << dpY << ' ' << dpZ << endl;
+				 */
+#endif
 				/* We'll calculate vStar next */
 				gen.particle[i][j][k].vStarX = 1.5 * gen.particle[i][j][k].vx
 					- 0.5 * old.particle[i][j][k].vx;
@@ -677,13 +719,13 @@ void semiLagrangeCalc(const Grid &old, Grid &gen) {
 						-1 + STEP * (k + 0.5)
 						);
 				/* Solve equation use original advectionTerm */
-				Vec3 alpha = Vec3(gen.particle[i][j][k].vStarX * TIME_STEP,
-						old.particle[i][j][k].vStarY * TIME_STEP,
-						old.particle[i][j][k].vStarZ * TIME_STEP);
+				Vec3 alpha = Vec3(gen.particle[i][j][k].vStarX,
+						old.particle[i][j][k].vStarY,
+						old.particle[i][j][k].vStarZ) * TIME_STEP * 0.5;
 				Vec3 newAlpha = velocityInterpolationWrapper(curr - alpha * 0.5, gen)
 					* TIME_STEP;
 				int iter = 1;
-				while(dist(alpha, newAlpha) < 0.01 && iter < ITER_TIMES) {
+				while(dist(alpha, newAlpha) >= CONTROL && iter < ITER_TIMES) {
 					alpha = newAlpha;
 					/* use vStar to interpolate */
 					newAlpha = velocityInterpolationWrapper(curr - alpha * 0.5, gen)
@@ -735,18 +777,6 @@ void semiLagrangeCalc(const Grid &old, Grid &gen) {
 				gen.particle[i][j][k].temperature = tempXdensY.dx;
 				gen.particle[i][j][k].density = tempXdensY.dy;
 
-				/*
-				 *if(i == 12 && j == 27 && k == 12) {
-				 *    std::cout << gen.particle[i][j][k].density << ' ' << old.particle[i][j][k].density << std::endl;
-				 *}
-				 */
-
-				/* Then interpolate vX, vY, vZ */
-				/*
-				 *gen.particle[i][j][k].vx = vXInterpolateWrapper(target, old);
-				 *gen.particle[i][j][k].vy = vYInterpolateWrapper(target, old);
-				 *gen.particle[i][j][k].vz = vZInterpolateWrapper(target, old);
-				 */
 			}
 		}
 	}
